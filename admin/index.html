@@ -164,9 +164,11 @@
         <div class="subtitle">Admin Dashboard — ${dateStr} at ${timeStr}</div>
 
         <div class="card">
-          <div class="card-title">Cost Overview (Estimated)</div>
+          <div class="card-title">Cost Overview</div>
           <div class="stat-row"><span class="stat-label">Messages this month</span><span class="stat-value">${cost.messagesThisMonth}</span></div>
-          <div class="stat-row"><span class="stat-label">Estimated Anthropic cost</span><span class="stat-value">$${cost.estimatedCost.toFixed(2)}</span></div>
+          <div class="stat-row"><span class="stat-label">Anthropic cost</span><span class="stat-value">$${cost.totalCost.toFixed(2)}${cost.realCostMessages > 0 ? ' <span style="font-size:11px;color:#888;">(' + cost.realCostMessages + ' tracked)</span>' : ''}</span></div>
+          ${cost.realCostMessages > 0 ? '<div class="stat-row"><span class="stat-label">&nbsp;&nbsp;Real (from tokens)</span><span class="stat-value" style="color:#2D7A3A;">$' + cost.realCost.toFixed(2) + '</span></div>' : ''}
+          ${cost.estimatedCostMessages > 0 ? '<div class="stat-row"><span class="stat-label">&nbsp;&nbsp;Estimated (' + cost.estimatedCostMessages + ' old msgs)</span><span class="stat-value" style="color:#888;">$' + cost.estimatedCost.toFixed(2) + '</span></div>' : ''}
           <div class="stat-row"><span class="stat-label">Monthly limit</span><span class="stat-value">$${cost.monthlyLimit.toFixed(2)}</span></div>
           <div class="stat-row"><span class="stat-label">Remaining</span><span class="stat-value" style="color: ${costColor};">$${cost.remaining.toFixed(2)}</span></div>
           <div class="progress-bar" style="color: ${costColor};">${progressBar} ${cost.percentUsed}%</div>
