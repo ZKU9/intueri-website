@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Intueri — Admin</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #F5F1EB;
+      color: #2C2C2C;
+      padding: 20px;
+      max-width: 700px;
+      margin: 0 auto;
+    }
+    h1 {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 24px;
+      color: #C4785C;
+      margin-bottom: 4px;
+    }
+    .subtitle {
+      color: #888;
+      font-size: 13px;
+      margin-bottom: 24px;
+    }
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .card-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #999;
+      margin-bottom: 14px;
+      font-weight: 600;
+    }
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+    }
+    .stat-label { color: #666; font-size: 14px; }
+    .stat-value { font-weight: 600; font-size: 14px; }
+    .progress-bar {
+      font-family: monospace;
+      font-size: 16px;
+      letter-spacing: 2px;
+      margin-top: 10px;
+      text-align: center;
+    }
+    .cost-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 13px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th {
+      text-align: left;
+      padding: 8px 14px;
+      border-bottom: 2px solid #E8E4DF;
+      color: #999;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 600;
+    }
+    th:nth-child(3) { text-align: center; }
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid #E8E4DF;
+    }
+    td:nth-child(2) { color: #666; }
+    td:nth-child(3) { text-align: center; font-weight: 600; }
+    td:nth-child(4) { color: #888; }
+    .refresh-note {
+      text-align: center;
+      color: #BBB;
+      font-size: 11px;
+      margin-top: 20px;
+      padding-bottom: 20px;
+    }
+    .loading {
+      text-align: center;
+      padding: 60px 20px;
+      color: #999;
+      font-size: 16px;
+    }
+    .error {
+      text-align: center;
+      padding: 60px 20px;
+      color: #C62828;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="loading">Loading dashboard...</div>
+  </div>
+
+  <script>
+    const API_BASE = "https://ywevizgfemblvpbsphbk.supabase.co/functions/v1/admin-stats";
+
+    async function loadDashboard() {
+      // Read key from URL hash: theintueri.com/admin#key=YOUR_SECRET
+      const hash = window.location.hash.substring(1);
+      const params = new URLSearchParams(hash);
+      const key = params.get("key");
+
+      if (!key) {
+        document.getElementById("app").innerHTML = '<div class="error">No admin key provided.<br><br><span style="font-size: 13px; color: #888;">Add #key=YOUR_SECRET to the URL</span></div>';
+        return;
+      }
+
+      try {
+        const response = await fetch(API_BASE + "?key=" + key);
+        if (!response.ok) {
+          throw new Error(response.status === 403 ? "Access denied — wrong key" : "Server error");
+        }
+
+        const data = await response.json();
+        renderDashboard(data);
+      } catch (err) {
+        document.getElementById("app").innerHTML = '<div class="error">' + err.message + '</div>';
+      }
+    }
+
+    function renderDashboard(data) {
+      const now = new Date(data.timestamp);
+      const dateStr = now.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+      const timeStr = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+
+      const cost = data.cost;
+      let costColor = "#2D7A3A";
+      let costBg = "#E8F5E9";
+      let costLabel = "Healthy";
+      if (cost.percentUsed >= 80) { costColor = "#C62828"; costBg = "#FFEBEE"; costLabel = "Danger"; }
+      else if (cost.percentUsed >= 60) { costColor = "#E65100"; costBg = "#FFF3E0"; costLabel = "Watch It"; }
+
+      const barFilled = Math.round(cost.percentUsed / 5);
+      const barEmpty = 20 - barFilled;
+      const progressBar = "\u2588".repeat(barFilled) + "\u2591".repeat(barEmpty);
+
+      let userRows = "";
+      for (const u of data.users) {
+        const joined = new Date(u.joined).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+        userRows += "<tr><td>" + u.username + "</td><td>" + u.email + "</td><td>" + u.credits + "</td><td>" + joined + "</td></tr>";
+      }
+
+      document.getElementById("app").innerHTML = `
+        <h1>Intueri</h1>
+        <div class="subtitle">Admin Dashboard — ${dateStr} at ${timeStr}</div>
+
+        <div class="card">
+          <div class="card-title">Cost Overview (Estimated)</div>
+          <div class="stat-row"><span class="stat-label">Messages this month</span><span class="stat-value">${cost.messagesThisMonth}</span></div>
+          <div class="stat-row"><span class="stat-label">Estimated Anthropic cost</span><span class="stat-value">$${cost.estimatedCost.toFixed(2)}</span></div>
+          <div class="stat-row"><span class="stat-label">Monthly limit</span><span class="stat-value">$${cost.monthlyLimit.toFixed(2)}</span></div>
+          <div class="stat-row"><span class="stat-label">Remaining</span><span class="stat-value" style="color: ${costColor};">$${cost.remaining.toFixed(2)}</span></div>
+          <div class="progress-bar" style="color: ${costColor};">${progressBar} ${cost.percentUsed}%</div>
+          <div style="text-align: center; margin-top: 10px;">
+            <span class="cost-badge" style="background: ${costBg}; color: ${costColor};">${costLabel}</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Today</div>
+          <div class="stat-row"><span class="stat-label">Messages</span><span class="stat-value">${data.today.messages}</span></div>
+          <div class="stat-row"><span class="stat-label">Active users</span><span class="stat-value">${data.today.activeUsers}</span></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">This Week</div>
+          <div class="stat-row"><span class="stat-label">Messages</span><span class="stat-value">${data.week.messages}</span></div>
+          <div class="stat-row"><span class="stat-label">Active users</span><span class="stat-value">${data.week.activeUsers}</span></div>
+          <div class="stat-row"><span class="stat-label">New signups</span><span class="stat-value">${data.week.newSignups}</span></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">All Users (${data.totalUsers})</div>
+          <table>
+            <thead><tr><th>Name</th><th>Email</th><th>Credits</th><th>Joined</th></tr></thead>
+            <tbody>${userRows}</tbody>
+          </table>
+        </div>
+
+        <div class="refresh-note">Pull down or refresh to update — data is live from your database</div>
+      `;
+    }
+
+    loadDashboard();
+  </script>
+</body>
+</html>
